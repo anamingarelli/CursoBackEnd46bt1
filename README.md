@@ -104,13 +104,15 @@ Os tipos de resquisição HTTP indicam a ação que o usuário deseja executar n
 - **DELETE**: Apaga um dado do Servidor.
 ---
 
-#### Iniciando o PHP
 
-##### O que é PHP 
+## Iniciando o PHP
+
+### O que é PHP 
 
 **PGP** (Hypertext PreProcessor) é uma linguagem de programação interpretada e open source, focada no desenvolvimento de sistemas para web, pode ser usada junto com HTML para criação de páginas web dinâmicas.
 
-##### Instalando o PHP
+
+### Instalando o PHP
 
 - Fazer o dowload do PHP (php.net);
 - ZIP - Non Thread Safe 8.5;
@@ -120,15 +122,17 @@ Melhor) => Nunca salvar arquivo na raiz do sistema (C:);
 - Adicionar a Pasta do PHP (C:\src\php) as Variáveis de Ambiente do Sistema (PATH);
 - Verificar a instalação rodando o Comando *php --version*.
 
-##### Contextualizando o PHP 
+
+### Contextualizando o PHP 
 
 O PHP de fato é uma das linguagens de programação mais populares da atualidade. Ela permite que você crie aplicações web robustas, de uma maneira muito simplificada e direto ao ponto. Sem contar que a linguagem traz diversos recursos que faciliam e aceleram o processo de desenvolvimento de sites e sistemas para web. E além do mais ela tem um ótimo ecossistema, uma execelnte comunidade e um grande mercado de trabalho.
 
-##### Criando Minha Primeira Aplicação em PHP 
+### Criando Minha Primeira Aplicação em PHP 
 
 Criando um Hello, World!!!
 
-##### Criando um Perfil de PHPVanilla
+
+### Criando um Perfil de PHPVanilla
 
 -> Profile -> Nem Profile
 -> Extensions:
@@ -136,3 +140,72 @@ Criando um Hello, World!!!
 - PHP Debug (xdebug): Acha Erros em Linha de Código 
 - PHP CS FIXER: Formatação padrão do código (Identação)
 - PHP Server: Sobe um Servidor Local para Acompanhamento em Tempo Real
+
+---
+
+
+### Estudo de Variáveis e Constantes em PHP 
+
+Declarar variáveis é alocar um espaço na memória que permite a inclusão e manipulação de dados.
+
+**Variáveis**
+
+- devem ser declaradas usando "$" antes do nome da variável;
+- podem ser String, Numérica (Integer e Float), Booleanas e Nulas. Não Permite declaração de Undefined;
+- são não tipadas ( não precisa declara o tipo na criação), a tipagem é atribuida ao adicionar o valor;
+- Usar o "declare(strict_types=1);" na primeira linha do arquivo ; => blindar o sistema contra conflitos de tipos de variáveis.
+
+**Constantes** 
+
+- não podem ser modificadas ou redeclaradas após a criação;
+- pode ser criada usando "const" ou "define";
+- não permitem interpolação.
+
+---
+
+
+### Estudo de Operadores 
+
+**Aritméticos**: São usados para realizar Cálculos.
+
+| Operador | Nome | Exemplo | Resultado | 
+| - | - | - | - |
+| + | Adição | 10 + 5 | 15 | 
+| - | Subtração | 10 - 5 | 5 | 
+| * | Multiplicação | 10 * 5 | 50 |
+| / | Divisão | 10 / 5 | 2 |
+| % | Módulo (Resto) | 10 % 3 | 1 (10 div 3 da 3, e sobra 1) |
+| ** | Expoente |  2 ** 3 | 8 (2 elevado a 3) | 
+
+> obs: O Operador % é o melhor amigo de um programador, permite ordenar listas e organizar fila e pilhas.
+
+---
+
+**Relacionais**: Permitem uma Comparação entre dois ou mais valores, o resultado de uma operação racional é sempre uma booleana (true, false)
+
+| Nome | Operador | Exemplo | Resultado | 
+| - | - | - | - |
+| Iguais | == | "5" == 5 | True |
+| Igualdade Estrita | === | "10" === 10 | False |
+| Diferente| != | "10" != 10 | False |
+| Diferença Estrita | !== | "10" !== 10 | True |
+| Maior que | > | 18 > 18 | False | 
+| Menor que | < | 10 < 20 | True |
+| Maior ou igual | >= | 18 >= 18 | True |
+| Menor ou igual | <= | 10 <= 5 | False 
+
+---
+
+**Lógicos**: Permite a Combinação entre sentenças.
+
+- Operador `AND` (E) => && : para resultados se verdadeirp, TODAS as Combinações precisam ser verdadeiras
+    - true && true && => true
+    - true && false => false
+
+- Operador `OR` (OU) => || : Para o resultado ser verdadeiro, basta APENAS UMA condição ser verdadeira
+    - false || true => true
+    - false || false => false
+
+- Operador `NOT` (Não) => ! : Inverte a lógica da Sentença
+    - !true => false
+    - !false => true
