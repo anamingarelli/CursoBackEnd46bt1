@@ -23,9 +23,9 @@ Carga Horária: 105h
 
 Duração: 20 Semanas
 
-### Semana 1: Introdução ao BackEnd e Configuração do Ambiente PHP
+## Semana 1: Introdução ao BackEnd e Configuração do Ambiente PHP
 
-#### O que é BackEnd? 
+### O que é BackEnd? 
 
 O back-end é a parte de um site ou aplicativo que o usuário não vê, mas que faz tudo funcionar por trás das telas.
 
@@ -57,9 +57,9 @@ O desenvolvimento Back-end é uma das áreas mais cruciais da Tecnologia da Info
 
 - Modelos de Trabalho: Alta flexibilidade com vagas presenciais, híbridas e remotas (inclusive com oportunidades internacionais).
 
-#### Ciclo de Vida da Requisição HTTP
+### Ciclo de Vida da Requisição HTTP
 
-##### O que é HTTP
+#### O que é HTTP
 
 **HTTP**, Hypertext Transfer Protocol, é um protocolo de comunicação utilizado para transferência de informações na WWW (World Wide Web) e em outros sitemas de Redes.
 
@@ -163,6 +163,7 @@ Declarar variáveis é alocar um espaço na memória que permite a inclusão e m
 
 ---
 
+## Semana 2 - Operadores em PHP (Aritméticos, Relacionais e Lógicos)
 
 ### Estudo de Operadores 
 
@@ -198,7 +199,7 @@ Declarar variáveis é alocar um espaço na memória que permite a inclusão e m
 
 **Lógicos**: Permite a Combinação entre sentenças.
 
-- Operador `AND` (E) => && : para resultados se verdadeirp, TODAS as Combinações precisam ser verdadeiras
+- Operador `AND` (E) => && : para resultados se verdadeiro, TODAS as Combinações precisam ser verdadeiras
     - true && true && => true
     - true && false => false
 
@@ -209,3 +210,111 @@ Declarar variáveis é alocar um espaço na memória que permite a inclusão e m
 - Operador `NOT` (Não) => ! : Inverte a lógica da Sentença
     - !true => false
     - !false => true
+
+---
+
+## Semana 3 - Estrutura de Controle de Dados (Condicionais e Repetição)
+
+- **Contéudo**: Estruturas `if`, `else`, `elseif`, operadores ternários,`match` => substituto do `switch/case`, loops `for`, `while`, `do-while` e `foreach`
+
+### Estrutura de Controle de Dados ajudam no processo de automatização em programas e sistemas
+
+#### Condicionais (IF, ELSE, ELSEIF)
+
+- **Formas de Uso**:
+
+Uso do `if` apenas 
+Exemplo: aplicar um desconto de 10% em compras acima de 100 reais;
+
+``` mermaid
+
+graph LR
+A[comando] --> B[condição] --> C[Tomada de Decisão]
+```
+
+```php
+if ($valorCompra > 100) {
+    $valorCompra * 0.1
+}
+```
+
+- Uso do `if` e do `else`
+Exemplo: Aplicar um desconto de 10% para compras acima de 100 reais e 5% para as demais compras
+
+```mermaid
+
+graph LR
+    A[Comando] --> B{Condição} 
+    B --> |true| C[Ação 1]
+    C --> |false| D[Ação 2]
+
+```    
+
+```php
+
+if($valorCompra > 100) {
+    $valorFinal = $valorCompra * 0.1;
+} else{
+    $valorFinal = $valorCompra * 0.5;
+}
+
+```
+
+- Uso do `elseif` (Encadeado)
+Exemplo: Compras acima de 200 reais tem 15% de desconto, acima de 100 reais tem 10% de desconto e outras 5% de desconto
+
+```mermaid
+
+graph LR
+    A[Comando] --> B{Condição 1}
+    B --> |true| C[Ação 1]
+    B --> |false| D{Condição 2}
+    D --> |true| E[Ação 2]
+    D --> |false| F[Ação 3]
+
+```
+
+```php
+
+if($valorCompra > 200){
+    $valorFinal = $valorCompra*0.85;
+} elseif($valorCompra > 100) {
+    $valorFinal - $valorCompra*0.9:
+} else {
+    $valorFinal = $valorCompra*0.95
+}
+
+```
+>obs: Sempre usar `elseif` para situações que precisam de mais de uma condição, ou seja, fazer encadeamento das condições -> uma condição depende da outra.
+
+#### Operadores Ternários 
+- Um atalho para a estrutura condicional `if/else`, normalmente escrito em uma única linha de código
+
+` condição ? verdadeira : falso `
+
+Perfeito para decisões curtas de uma linha de comando
+Exemplo: Verificar se a pessoa é Maior de Idade (18)
+
+```php
+
+$idade = 20;
+//O formato é : (Condição) ? Verdadeiro : Falso;
+
+$status = ($idade >= 18) ? "Maior de Idade" : "Menor de Idade";
+
+```
+
+#### Expressão Condicional `match` (PHP 8)
+
+No mercado de PHP atual, não se usa mais uma dezena de `if/else`  para checar valores fixos, e o antigo `switch/case` caiu em desuso. Usamos o `match`. Ele compara um valor e retorna diretamente o resultado.
+
+```mermaid 
+
+graph TD
+    A[valor] --> B{Condicional}
+    B --> C[Ação 1]
+    B --> D[Ação 2]
+    B --> E[Ação 3]
+    B --> F[Ação 4]
+    B --> G[...]
+    B --> H[Ação default]
