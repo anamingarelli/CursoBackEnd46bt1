@@ -30,4 +30,7 @@ do {
 
 } while ($opcao != 4 && $opcao != 0);
 
+// Não consegui terminar
+
+
 ?>
