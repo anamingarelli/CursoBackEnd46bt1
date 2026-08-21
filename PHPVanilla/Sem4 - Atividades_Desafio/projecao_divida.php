@@ -37,7 +37,7 @@ for ($mes = 1; $mes <= 12; $mes++) {
     if ($mes == 6) {
 
         // Informa que no sexto mês não haverá cobrança de juros
-        echo "Mês 6 - Isenção de juros<br>";
+        echo "\nMês 6 - Isenção de juros<br>";
 
         // O continue foi usado para pular o cálculo dos juros do sexto mês e continuar a repetição no mês seguinte
         continue;
@@ -50,8 +50,8 @@ for ($mes = 1; $mes <= 12; $mes++) {
     $divida += $juros;
 
     // Mostra os valores calculados de cada mês
-    echo "Mês $mes - Juros: R$ $juros";
-    echo " - Dívida: R$ $divida<br>";
+    echo "\nMês $mes - Juros: R$ $juros";
+    echo "\n - Dívida: R$ $divida<br>";
 }
 
 ?>
