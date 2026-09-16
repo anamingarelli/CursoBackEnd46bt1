@@ -6,7 +6,7 @@ declare(strict_types=1);
 define("EMAIL_CORRETO", "admin@senai.br");
 define("SENHA_CORRETA", "senhaSegura123");
 
-//Declarar Variáveis de Controle
+//declara variáveis de controle
 $mensagemSucesso = "";
 $erro = [];
 
@@ -17,7 +17,7 @@ $email = "";
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     //Recuperar os Dados do Formulário
     $email = trim((string) ($_POST["email"] ?? ""));
-    $senha = (string) ($_POST["senha"] ?? ""); // Senhas não devem ter espaços cortados com trim obrigatoriamente
+    $senha = (string) ($_POST["senha"] ?? ""); // as senhas não devem ter espaços cortados com trim obrigatoriamente
 
     // Requisito: Validação do E-mail (filter_var)
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -29,13 +29,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $erro["senha"] = "A senha deve ter no mínimo 6 caracteres";
     }
 
-    // SE não existir erros de validação, compara com as credenciais fictícias
+    // caso não existir erros de validação, compara com as credenciais fictícias
     if ($erro === []) {
         if ($email === EMAIL_CORRETO && $senha === SENHA_CORRETA) {
-            // Requisito: Card de boas-vindas se o login for correto
+            // requisito: Card de boas-vindas se o login for correto
             $mensagemSucesso = "Bem-vindo ao sistema, Administrador!";
         } else {
-            // Requisito: Mensagem exata se for incorreto
+            // requisito: mensagem exata se for incorreto
             $erro["login"] = "Credenciais inválidas";
         }
     }
@@ -66,7 +66,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 </div>
             <?php endif; ?>
 
-            <!-- Mensagem de erro de credenciais inválidas -->
+            <!-- mensagem de erro de credenciais inválidas -->
             <?php if (isset($erro["login"])): ?>
                 <div class="erro-login" style="background: #f8d7da; color: #721c24; padding: 12px; margin-bottom: 15px; border-radius: 4px; font-weight: bold;">
                     <?= $erro["login"] ?>
@@ -77,14 +77,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             <form action="ex03_login_seguro.php" method="POST" novalidate>
                 
                 <label for="email">E-mail</label>
-                <!-- REQUISITO: Sticky Form ativo apenas para o e-mail -->
+                <!-- requisito: Sticky Form ativo apenas para o e-mail -->
                 <input type="email" name="email" id="email" placeholder="Ex: exemplo@senai.br" value="<?= htmlspecialchars($email) ?>">
                 <?php if (isset($erro["email"])): ?>
                     <div class="erro"><?= $erro["email"] ?></div>
                 <?php endif; ?>
 
                 <label for="senha">Senha</label>
-                <!-- REQUISITO DE SEGURANÇA: O campo value NUNCA é repopulado com a senha digitada -->
+                <!-- requisito de segurança: O campo value nunca é repopulado com a senha digitada -->
                 <input type="password" name="senha" id="senha" placeholder="Digite sua senha">
                 <?php if (isset($erro["senha"])): ?>
                     <div class="erro"><?= $erro["senha"] ?></div>

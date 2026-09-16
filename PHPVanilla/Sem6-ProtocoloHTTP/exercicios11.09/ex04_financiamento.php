@@ -11,10 +11,10 @@ $valorEntradaTexto = "";
 $numParcelasTexto = "";
 $opcoesParcelas = "";
 
-// CORREÇÃO: Opções permitidas para o número de parcelas (Requisito)
+// opções permitidas para o número de parcelas (Requisito)
 $opcoesParcelas = [12, 24, 36, 48, 60];
 
-// Variáveis para a memória de cálculo
+// variáveis para a memória de cálculo
 $valorFinanciado = 0.0;
 $totalJuros = 0.0;
 $valorParcela = 0.0;
@@ -51,12 +51,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         }
     }
 
-    // SE não existir erros, realiza o cálculo de negócio
+    // se não existir erros, realiza o cálculo de negócio
     if ($erro === []) {
         // Regra de Negócio: Saldo financiado
         $valorFinanciado = $valorVeiculo - $valorEntrada;
         
-        // Regra de Negócio: Juros de 1.5% ao mês sobre o saldo financiado (Juros Simples didático: J = C * i * t)
+        // regra de negócio: Juros Simples de 1.5% ao mês sobre o saldo financiado -> se fosse composto usaria um laço de repetição (FOR)
         $taxaJurosMensal = 0.015; 
         $totalJuros = $valorFinanciado * $taxaJurosMensal * $numeroParcelas;
         
