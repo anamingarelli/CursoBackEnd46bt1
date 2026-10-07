@@ -1465,3 +1465,188 @@ flowchart LR
     A -->|"Chama métodos:<br/>salvar(),listar(),excluir()"| B
     B -->|"Executa Prepared Statement<br/>via PDO"| C
 ```
+
+### Semana 10 - Sessões, Cookies e Autenticação Segura
+
+**Tema:** Gestão de Estado com HTTP, Ciclo de Vida da Sessão (`$_SESSION`), Cookies, Hashing de Criptografia, Middlewares de Autenticação
+
+#### **O Protocolo HTTP: Como ele lembra de você?**
+
+O Protocolo HTTP é totalmente  **STATELES (sem armazenamento de estado)**. Isso significa que o servidor web trata cada requisição HTTP de forma isolada, como se fosse a primeira vez que ele estivesse interagindo com o usuário do sistema.
+
+Para resolver esse problema sem obrigar o usuário a digitar o login e senha novamente a cada clique fazemos o seguinte:
+
+1. Ao fazer o login bem-sucedido, o servidor entrega ao cliente uma **comanda/pulseira VIP numerada** (um identificados de sessão única e aleatória).
+2. O navegador armazena essa comanda/pulseira em um **Cookie**.
+3. A cada nova página solicitada, o navegador apresenta automaticamente essa pulseira no cabeçalho da requisição.
+4. O PHP lê o número da comanda/pulseira, localiza os dados do usuário armazenados na memória do servidor (`$_SESSION`) e reconhece quem é ele!
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Cliente as Navegador do Usuário
+    participant Servidor as  Servidor PHP/BD
+
+    Cliente->>Servidor: 1. POST /login.php (Usuário envia email a senha)
+    Servidor-->Cliente: 2. HTTP 200 OK (Credenciais válidas! Redireciona)
+    Note Over Servidor: A conexão TCP é encerrada. O Servidor esquece do Usuário
+
+    Cliente->>Servidor: 3. GET /dashboard.php (Usuário tenta ler os relatórios)
+    Note over Servidor: Servidor: "Quem é você? Nunca te vi antes!"
+    Servidor -->> Cliente: 4. HTTP 302 Redirect -> login.php
+```
+
+**Situação com Armazenamento de Cookie e SESSION**
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Navegador as Navegador do Usuário
+    participant PHP as Servidor PHP
+    participant Sessao as Armazenamento de $_SESSION
+
+    Navegador->>PHP: POST /login.php (envia usuário e senha)
+    PHP->>PHP: Valida as credenciais
+    PHP->>Sessao: Armazena os dados do usuário em $_SESSION
+    Sessao-->>PHP: Retorna o ID da sessão
+    PHP-->>Navegador: Resposta com Set-Cookie: PHPSESSID=<ID da sessão>
+    Note over Navegador: Guarda o ID da sessão no cookie
+    Navegador->>PHP: GET /dashboard.php com Cookie: PHPSESSID=<ID da sessão>
+    PHP->>Sessao: Busca os dados associados ao ID da sessão
+    Sessao-->>PHP: Retorna os dados do usuário
+    PHP-->>Navegador: Exibe o dashboard autenticado
+
+```
+
+#### **Como funciona o COOKIE HTTP**
+
+Um **Cookie** é um pequeno arquivo de texto (geralmente limitado a 4KB) gravado pelo navegador a pedido do servidor através do cabeçalho de resposta `Set-Cookie`.
+
+**Cookies podem vazar informação?**
+
+Sim, se um cookie de sessão for configurado com parâmetros desprotegidos, qualquer script malicioso injetado na página (XSS) pode roubar a sessão do usuário logado. 
+
+**Para evitar problemas de Segurança em Cookies:**
+
+| Flag de Segurança | O que ela faz? | Por que é indispensável? |
+| :--- | :--- | :--- |
+| **`HttpOnly`** | Impede que scripts JavaScript executem leitura no cookie via `document.cookie`. | **Neutraliza o roubo de sessão via XSS!** Mesmo que haja uma falha de injeção de script na tela, o navegador proíbe o JavaScript de ler o identificador de sessão. |
+| **`SameSite=Lax`** | Restringe o envio do cookie apenas a navegações originadas do próprio domínio. | **Protege contra ataques CSRF** (*Cross-Site Request Forgery*), impedindo que links externos forjem ações logadas. |
+| **`Secure`** | Garante que o cookie só seja transmitido em conexões criptografadas com **HTTPS**. | Impede que bisbilhoteiros em redes Wi-Fi públicas interceptem a sessão em trânsito (*Man-in-the-Middle*). *(Em ambiente local de desenvolvimento sem SSL, pode ser desativado temporariamente).* |
+
+#### **O Ciclo de Vida da SESSÃO em PHP: `$_SESSION` no Servidor**
+
+Enquanto os cookies residdem no Navegador, os dados da sessão ficam armazenados com **privacidade total dentro do servidor** (em arquivos temporários na memória).
+
+```mermaid
+flowchart TB
+    subgraph Cliente["Cliente-Side(Navegador)"]
+        cookie["Cookie de Sessão"]
+    end
+
+    subgraph Servidor["Server-Side(Servidor)"]
+        memoria["Superglobal $_SESSION"]
+        disco["Token"]
+    end
+
+    Cliente -->|"Interage com o UI"| cookie
+    cookie -->|"Envia Token no Header HTTP"| Servidor
+    Servidor -->|"Lê Token e Carrega Dados"| memoria
+    memoria <-->|"Persistência em Disco"| disco
+    Servidor -->|"Garante A Autenticação do Usuário"| Cliente
+
+    style cookie fill:#fed7aa,stroke:#ea580c,stroke-width:2px,color:#7c2d12
+    style memoria fill:#bbf7d0,stroke:#16a34a,stroke-width:2px,color:#14532d
+    style disco fill:#e2e8f0,stroke:#64748b,stroke-width:2px,color:#1e293b   
+
+```
+
+**Sintaxe Essencial do PHP para Sessões**
+
+```php
+//configurando a sessão com funções pré-definidas no PHP (documentação)
+
+//1. Configurar as flags dos cookies antes de abrir a Sessão
+session_set_cookie_params([
+    "lifetime"  => 0,       //Cookie expira ao fechar o navegador
+    "path"      => "/"      //Válido para todo o domínio do site
+    "httponly"  => true     //Proteção contra XSS
+    "samesite"  => "Lax"    //Proteção conta CSRF
+]);
+
+// 2. Iniciar ou restaurar a session ativa
+session_start();
+
+// 3. Gravar os dados ma sessão (após validar o Login)
+// Usar a superglobal($_SESSION) para isso
+$_SESSION["usuario_id"] = 10
+$_SESSION["usuario_perfil"] = "ADMIN";
+
+//4. Permitir a leitura dos dados em qualquer página do meu site
+$idLogado = $_SESSION["usuario_id"] ?? null; // se o usuario não tiver feito login a session é null
+
+```
+
+#### **Criptogarfia de Senhas**
+
+No passado, desenvolvedores armazenavam senhas utilizando funções matemáticas de integridade com `md5($senha)` ou `shal($senha)`.
+
+> O MD5 foi quebrado em 2004 e SHA1 foi quebrado em 2017
+
+**A Solução Moderna é Criptografia com uso de Hash**
+
+O padrão de Criptografia Moderno é o **Argon2id**, complementado pelo **Bcrypt**
+
+**Característica da Cryptografica de Hash**:
+1. **Unidirecional(One-Way):** É matematiamente impossível descriptografar o hash para recuperar a senha original.
+2. **Salt Automático e Aleatório**: A cada execução, a função gera um vetor de `salt` unico de 16 bytes. Mesmo que 2 pessoas tenham o mesma senha, os hashes gerados serão completamentes diferentes!
+3. **Custos Ajustáveis**: É possivel calibrar quanto tempo e quanta memória o algoritmo levará para calcular o hash.
+
+**Sintaxe Profissional de Cryptografia Moderna**
+
+```php
+$senhaDigitada = "123456";
+$senhaInformada = $_POST["senha"];
+$hashDoBanco    = $usuario["hash"];
+
+//gerar a hash utilizando Argon2id (ou Bcrypt)
+$hash = password_hash($senhaDigitada, PASSWORD_ARGON2ID);
+//Saída: $argon2id$v=19$m65536,t=4,p=1$FSGJhfavdb...  (comprimeto ~96 a 128 chars) 
+
+// O Processo de Verificação
+if(password_verify($senha_informada, $hashDoBanco)){
+    //senha correta
+}else {
+    //senha incorreta
+}
+
+```
+
+>[!Aviso]
+>Nunca tente fazer  (password_hash($senha) === $hashDoBanco).
+>Como o `password_hash` gera um salt aleatório a cada milisegundo, a comparação por igualdade **sempre dará falso**
+> A Verificação deve ser feita **exclusivamente com a função nativa `password_verify()`.
+
+#### **Arquitetura de Autenticação: Middleware**
+
+para inpedir que visitantes não logados acessem páginas privadas (como dashboard.php ou relatorios.php), criamos interceptadores chamados **Guard (Middlewares de Proteção)**.
+
+```mermaid
+flowchart TD
+    req["Requisição do Navegador<br/>GET(dashboard.php)"] --> guard["Middleware: guard.php"]
+
+    guard --> check1{"$_SESSION[usuario_id existe?]"}
+    check1 -- Não --> kick1["header(login.php)"]
+
+    check1 -- Sim --> allow["header(dashboard.php)"]
+```
+**Como usar o guard.php**:
+
+Em todas as páginas restritas do sistema a **primira linha de código** após o `declare(strict_types=1)` será:
+
+```php
+require_onde __DIR__ . "/src/guard.php";
+```
+Se a pessoa não estiver autenticas ou não tiver o perfil de acesso, ela é expulsa antes mesmo que qualquer bytes de HTML seja renderizado
+
+
