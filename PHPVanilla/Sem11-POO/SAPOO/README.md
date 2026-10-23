@@ -18,3 +18,14 @@ SAPOO/
 └── README.md                                   <- Documentação e testes
 ```
 
+## Criação das Execeções de Domínio
+
+## Entidade de Titularidade com Imutabilidade (`readonly`)
+
+## Criação da SuperClasse Abstrata de Conta Bancária 
+
+## Criação das Classe Hendeiras
+
+## Criação da Tela Visual
+
+Desafios
