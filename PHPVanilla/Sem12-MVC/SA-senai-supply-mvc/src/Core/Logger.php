@@ -15,7 +15,29 @@ final class Logger{
         $ip = $_SERVER["REMOTE_ADDR"] ?? "CLI"; //pega ip do usuario
         $dataHora = date("Y-m-d H:i:s"); // pega data e hora
         $detalhe = !empty($contexto) ? " " . json_encode($contexto, JSON_UNESCAPED_UNICODE) : ""; //transforma a string contexto em json
-        $linha = sprintf("[%s] [%s] [IP: %s] %s%s%s",$dataHora, $nivel, $ip, $mensagem, $detalhes, PHP_EOL);
+        $linha = sprintf("[%s] [%s] [IP: %s] %s%s%s",$dataHora, $nivel, $ip, $mensagem, $detalhe, PHP_EOL);
         file_put_contents($caminhoDir . '/app.log', $linha, FILE_APPEND | LOCK_EX);
     }
+
+    // Criar métodos para identificação de logs
+    // Registrar eventos informativos de auditoria
+    public static function info(string $mensagem, array $contexto=[]):void{
+        self::gravar("INFO", $mensagem, $contexto);
+    }
+
+    // Registro de aviso - Violações de Négocio
+    public static function aviso(string $mensagem, array $contexto=[]):void{
+        self::gravar("AVISO", $mensagem, $contexto);
+    }
+
+    //Registro de falha de erro - execução crítica
+    public static function erro(string $mensagem, array $contexto=[]):void{
+        self::gravar("ERRO", $mensagem, $contexto);
+    }
+
+    // Obs: métodos ou atributos "static" -> são executados ou chamados diretamente pela classe 
+    // sem a necessidade de instanciar um obj
+    // podemos fazer uma analogia a um obj descartável,
+    // serve apenas para uma única tarefa e depois é jogado fora evitando ocupar espaço na memória
+    
 }
