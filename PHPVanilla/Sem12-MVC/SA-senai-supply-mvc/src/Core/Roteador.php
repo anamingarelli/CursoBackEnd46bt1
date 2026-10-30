@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+namespace App\Core;
+
 final class Roteador {
     //Roteador HTTP com suporte a depacho de rotas e Guards de Segurança
     private array $rotas = [];

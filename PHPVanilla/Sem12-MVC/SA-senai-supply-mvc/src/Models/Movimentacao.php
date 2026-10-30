@@ -1,16 +1,24 @@
 <?php
 declare(strict_types=1);
 
+namespace App\Models;
+
+use App\Core\ConexaoBanco;
 use PDO;
+use App\Core\Logger;
+use Throwable;
+use DomainException;
+
+
 
 final class Movimentacao {
-    // Criar o PDO
+    //criar o PDO
     private static function pdo(): PDO {
-        $cfg = dirname(__DIR__,2) . '/config/database.ini';
+        $cfg = dirname(__DIR__, 2) . '/config/database.ini';
         return ConexaoBanco::obterConexao($cfg);
     }
 
-    // Registrar uma Movimentacao (entrada/saída)
+    // Registrar uma Movimentacao (entrada / saída)
     public static function registrar(int $prodId, int $userId, string $tipo, int $qtd, string $motivo): void {
         $pdo = self::pdo();
         $pdo->beginTransaction();
@@ -22,17 +30,17 @@ final class Movimentacao {
             self::inserirHistorico($pdo, $prodId, $userId, $tipo, $qtd, $motivo);
             $pdo->commit();
             Logger::info("Movimentação de estoque concluida com sucesso", [
-                "produto_id"=> $prodId,
+                "produto_id"=> $prodId, 
                 "usuario_id"=> $userId,
-                "tipo"=> $tipo,
-                "quantidade"=>$qtd]);
-        }catch (Throwable $th) {
+                "tipo" => $tipo,
+                "quantidade" => $qtd]);
+        } catch (Throwable $th) {
             $pdo->rollBack(); //não executa a transação
             throw $th;
         }
     }
 
-    // Validar se saldo suficiente para retirada
+    //validarr se saldo suficiente para retirada
     private static function validarSaldo(PDO $pdo, int $prodId, int $qtd): void {
         $sql = "SELECT estoque FROM produtos WHERE id = :id FOR UPDATE";
         $stmt = $pdo->prepare($sql);
@@ -54,9 +62,9 @@ final class Movimentacao {
         $stmt->execute([':qtd' => $qtd, ':id' => $prodId]);
     }
 
-    // Gravar o registro da movimentação no banco de dados fazendo auditoria de log
-     private static function inserirHistorico(PDO $pdo, int $prodId, int $userId, string $tipo, int $qtd, string $motivo): void {
-        $sql = "INSERT INTO movimentacoes_estoque (produto_id, usuario_id, tipo, quantidade, motivo) 
+    //Gravar o registro da movimentação no banco de dados fazendo auditoria de log
+    private static function inserirHistorico(PDO $pdo, int $prodId, int $userId, string $tipo, int $qtd, string $motivo): void {
+        $sql = "INSERT INTO movimentacoes (produto_id, usuario_id, tipo, quantidade, motivo) 
                 VALUES (:prod, :usr, :tipo, :qtd, :motivo)";
         $stmt = $pdo->prepare($sql);
         $stmt->execute([
@@ -66,11 +74,10 @@ final class Movimentacao {
             ':qtd'    => $qtd,
             ':motivo' => trim($motivo)
         ]);
-
-        //chamar o registro da auditoria
+        //chamar o registro da auditoria de log
         Logger::info(
-            "Movimentação de estoque", [
-               "produto_id"=> $prodId, 
+            "Movimentação de estoque",[   
+                "produto_id"=> $prodId, 
                 "usuario_id"=> $userId,
                 "tipo" => $tipo,
                 "quantidade" => $qtd,
@@ -91,6 +98,5 @@ final class Movimentacao {
         $stmt->execute();
         return $stmt->fetchAll();
     }
-
 
 }

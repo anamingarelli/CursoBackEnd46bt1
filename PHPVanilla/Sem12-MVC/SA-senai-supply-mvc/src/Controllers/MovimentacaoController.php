@@ -1,94 +1,62 @@
 <?php
 declare(strict_types=1);
 
-use PDO;
+namespace App\Controllers;
 
-final class Movimentacao {
-    //criar o PDO
-    private static function pdo(): PDO {
-        $cfg = dirname(__DIR__, 2) . '/config/database.ini';
-        return ConexaoBanco::obterConexao($cfg);
-    }
+use App\Core\Controller;
+use App\Core\Guard\AuthGuard;
+use App\Models\Movimentacao;
+use app\Models\Produto;
+use DomainException;
 
-    // Registrar uma Movimentacao (entrada / saída)
-    public static function registrar(int $prodId, int $userId, string $tipo, int $qtd, string $motivo): void {
-        $pdo = self::pdo();
-        $pdo->beginTransaction();
-        try {
-            if ($tipo === "SAÍDA"){
-                self::validarSaldo($pdo, $prodId, $qtd);
-            }
-            self::atualizarEstoque($pdo, $prodId, $tipo, $qtd);
-            self::inserirHistorico($pdo, $prodId, $userId, $tipo, $qtd, $motivo);
-            $pdo->commit();
-            Logger::info("Movimentação de estoque concluida com sucesso", [
-                "produto_id"=> $prodId, 
-                "usuario_id"=> $userId,
-                "tipo" => $tipo,
-                "quantidade" => $qtd]);
-        } catch (Throwable $th) {
-            $pdo->rollBack(); //não executa a transação
-            throw $th;
+final class MovimentacaoController extends Controller {
+
+    //fomrulário para registrar movimentação
+    public function formulario(): void {
+        $produtoId = (int)($_GET['produto_id'] ?? 0);
+        $produto = Produto::buscarPorId($produtoId);
+        if (!$produto) {
+            $this->redirecionar('/produtos');
         }
-    }
-
-    //validarr se saldo suficiente para retirada
-    private static function validarSaldo(PDO $pdo, int $prodId, int $qtd): void {
-        $sql = "SELECT estoque FROM produtos WHERE id = :id FOR UPDATE";
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute([':id' => $prodId]);
-        $estoqueAtual = (int)$stmt->fetchColumn();
-        if ($estoqueAtual < $qtd) {
-            Logger::aviso("Tentativa de retirada rejeitada por saldo insuficiente", [
-                'produto_id' => $prodId, 'estoque_atual' => $estoqueAtual, 'solicitado' => $qtd
-            ]);
-            throw new DomainException("Saldo insuficiente. Estoque atual: {$estoqueAtual} un.");
-        }
-    }
-
-    //Atualizar Estoque
-    private static function atualizarEstoque(PDO $pdo, int $prodId, string $tipo, int $qtd): void {
-        $operacao = ($tipo === 'ENTRADA') ? '+' : '-'; //operador ternário (if/else encurtado)
-        $sql = "UPDATE produtos SET estoque = estoque {$operacao} :qtd WHERE id = :id";
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute([':qtd' => $qtd, ':id' => $prodId]);
-    }
-
-    //Gravar o registro da movimentação no banco de dados fazendo auditoria de log
-    private static function inserirHistorico(PDO $pdo, int $prodId, int $userId, string $tipo, int $qtd, string $motivo): void {
-        $sql = "INSERT INTO movimentacoes (produto_id, usuario_id, tipo, quantidade, motivo) 
-                VALUES (:prod, :usr, :tipo, :qtd, :motivo)";
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute([
-            ':prod'   => $prodId,
-            ':usr'    => $userId,
-            ':tipo'   => $tipo,
-            ':qtd'    => $qtd,
-            ':motivo' => trim($motivo)
+        $this->renderizar('movimentacoes/novo', [
+            'titulo'    => "Movimentar Estoque: {$produto['nome']}",
+            'produto'   => $produto,
+            'csrfToken' => $this->obterCsrfToken()
         ]);
-        //chamar o registro da auditoria de log
-        Logger::info(
-            "Movimentação de estoque",[   
-                "produto_id"=> $prodId, 
-                "usuario_id"=> $userId,
-                "tipo" => $tipo,
-                "quantidade" => $qtd,
-                "motivo"=> $motivo]
-        );
     }
 
-    //listar todas as movimentações
-    public static function listarHistorico(int $limite = 20): array {
-        $sql = "SELECT m.id, m.tipo, m.quantidade, m.motivo, m.criado_em,
-                       p.nome AS produto_nome, u.nome AS usuario_nome
-                FROM movimentacoes_estoque m
-                JOIN produtos p ON p.id = m.produto_id
-                JOIN usuarios u ON u.id = m.usuario_id
-                ORDER BY m.criado_em DESC LIMIT :limite";
-        $stmt = self::pdo()->prepare($sql);
-        $stmt->bindValue(':limite', $limite, PDO::PARAM_INT);
-        $stmt->execute();
-        return $stmt->fetchAll();
+    //salvar a movimentação
+    public function salvar(): void {
+        if (!$this->validarCsrfToken($_POST['csrf_token'] ?? null)) {
+            $this->redirecionar('/produtos');
+        }
+        $prodId = (int)($_POST['produto_id'] ?? 0);
+        $tipo   = (string)($_POST['tipo'] ?? '');
+        $qtd    = (int)($_POST['quantidade'] ?? 0);
+        $motivo = trim($_POST['motivo'] ?? '');
+        $userId = AuthGuard::obterUsuarioId();
+
+        try {
+            Movimentacao::registrar($prodId, (int)$userId, $tipo, $qtd, $motivo);
+            $this->redirecionar('/movimentacoes');
+        } catch (DomainException $e) {
+            $produto = Produto::buscarPorId($prodId);
+            $this->renderizar('movimentacoes/novo', [
+                'titulo'    => "Movimentar Estoque",
+                'produto'   => $produto,
+                'erro'      => $e->getMessage(),
+                'csrfToken' => $this->obterCsrfToken()
+            ]);
+        }
+    }
+
+    //listar os histórico de movimentações
+    public function historico(): void {
+        $movimentacoes = Movimentacao::listarHistorico(50);
+        $this->renderizar('movimentacoes/historico', [
+            'titulo'        => 'Histórico e Auditoria de Movimentações',
+            'movimentacoes' => $movimentacoes
+        ]);
     }
 
 }

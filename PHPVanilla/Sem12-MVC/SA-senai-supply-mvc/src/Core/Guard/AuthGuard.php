@@ -1,10 +1,14 @@
 <?php
 declare(strict_types=1);
 
+namespace App\Core\Guard;
+
+use App\Core\Logger;
+
 final class AuthGuard {
     //Guard responsável por validar autenticação de sessão, perfil e auditar acessos
 
-    // Método para verificar o perfil e autenticação
+    //método para verificar o perfil e autenticação
     public static function proteger(array $perfisPermitidos = []): void {
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
@@ -25,7 +29,7 @@ final class AuthGuard {
         }
     }
 
-    // Verifica se existe um usuario
+    //verifica se existe um usuario autenticado
     public static function usuarioLogado(): bool {
         return !empty($_SESSION['usuario_id']);
     }
@@ -36,11 +40,11 @@ final class AuthGuard {
     }
 
     //Obter o Id do Usuário
-   public static function obterUsuarioId(): ?int {
+    public static function obterUsuarioId(): ?int {
         return isset($_SESSION['usuario_id']) ? (int)$_SESSION['usuario_id'] : null;
     }
 
-    //Negar acesso ao Usuário
+    //negar acesso ao Usuário
     private static function negarAcesso(): void {
         http_response_code(403);
         echo "<h1 style='font-family:sans-serif;color:#dc2626;text-align:center;margin-top:60px;'>403 — Acesso Proibido</h1>";
