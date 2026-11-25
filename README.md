@@ -2611,3 +2611,184 @@ Nesta Semana iremos estudar a interface visual da aplicação e a diferença ent
 
 1. **Duplicidades de Códigos**: Se a aplicação possuir 30 telas, as tags `<DOCTYPE html>` `<head>` e outras tags como menus, rodapés e cabeçalhos deverão ser copiadas e coladas as 30 vezes. Se o logo da empresa mudar, por exemplo, o desenvolvedor terá que editar 30 vezes os arquivos manualmente.
 2. **Vulnerabilidade e Ataques XSS**: Ao utilizarmos `echo $variavel` sem `htmlspecialchars()`, qualquer script malicioso pode ser gravado no banco de daods (ex: `<script>RoubarCookies<\script>`) e será executado silenciosamente no navegador do usuário.
+3.3. **Acoplamento Extremo:** A lógica de decisão de apresentação fica misturada com HTML bruto, inviabilizando testes e colaboração entre equipes de Back-End e Front-End.
+
+```mermaid
+flowchart TD
+    subgraph Caotico ["Abordagem Legada (Insegura e Repetitiva)"]
+        arq1["ordem_criar.php<br/>• Repete cabeçalho e menu<br/>• echo sem escape<br/>• Sem componentes"]
+        arq2["ordem_listar.php<br/>• Repete cabeçalho e menu<br/>• if/else procedural<br/>• HTML duplicado"]
+        arq3["equipamento_listar.php<br/>• Repete cabeçalho e menu<br/>• Risco de XSS<br/>• Zero modularidade"]
+    end
+
+    subgraph Blade ["Arquitetura Blade no Laravel 11 (Modular e Segura)"]
+        layout["Layout Mestre Compartilhado<br/>(resources/views/layouts/app.blade.php)"]
+        comp["Componentes Reutilizáveis<br/>(<x-card-kpi>, <x-badge-status>, <x-alert>)"]
+        views["Views Filhas Leves<br/>(Apenas o conteúdo específico com @extends)"]
+
+        layout --> views
+        comp --> views
+    end
+
+    style Caotico fill:#fee2e2,stroke:#dc2626,stroke-width:2px,color:#7f1d1d
+    style Blade fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#14532d
+```
+
+---
+
+## 2. ANATOMIA E CICLO DE COMPILAÇÃO DO BLADE
+
+O **Blade** é o motor de templates nativo e exclusivo do framework Laravel. Diferente de outros motores de template (como o Smarty ou o Twig), o Blade **não impede você de usar código PHP puro se necessário**, mas oferece uma sintaxe expressiva, limpa e extremamente produtiva.
+
+### Como o Blade Funciona por Baixo do Capô?
+1. Todas as views Blade possuem a extensão composta `.blade.php`.
+2. Quando o Controller executa `return view('ordens.index')`, o Laravel lê o arquivo `resources/views/ordens/index.blade.php`.
+3. O Blade compila as diretivas (`@if`, `@forelse`, `{{ }}`) convertendo-as em **código PHP puro e otimizado**.
+4. O resultado compilado é gravado em cache no disco em `storage/framework/views/`.
+5. Nas requisições seguintes, o Laravel verifica se o arquivo original foi modificado: se não foi, ele executa o cache compilado diretamente, entregando **performance máxima e zero sobrecarga de processamento**.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Cliente as Navegador Web
+    participant Router as Roteador (routes/web.php)
+    participant Ctrl as OrdemServicoController
+    participant Engine as Blade Compiler
+    participant Cache as storage/framework/views
+    participant Model as Model (OrdemServico)
+
+    Cliente->>Router: GET /ordens
+    Router->>Ctrl: index()
+    Ctrl->>Model: buscarTodas()
+    Model-->>Ctrl: Coleção de Ordens
+    Ctrl->>Engine: view('ordens.index', dados)
+    alt Cache não existe ou arquivo foi alterado
+        Engine->>Engine: Compila diretivas Blade para PHP puro
+        Engine->>Cache: Salva arquivo compilado (.php)
+    end
+    Cache-->>Cliente: Retorna HTML estruturado, sanitizado e rápido
+```
+
+> [!TIP]
+> **Comandos Artisan Essenciais para o Blade:**  
+> - `php artisan view:clear` ➔ Limpa todo o cache de views compiladas (essencial durante depuração de layouts).  
+> - `php artisan view:cache` ➔ Pré-compila todas as views da aplicação de uma só vez (recomendado ao realizar deploy em produção).
+
+---
+
+## 3. SINTAXE DE INTERPOLAÇÃO E DEFESA ATIVA CONTRA XSS
+
+### 1. Interpolação Segura com Escape Automático (`{{ }}`):
+A sintaxe `{{ $variavel }}` é a forma padrão de exibir dados no Blade.  
+O Blade envolve internamente a variável com a função nativa `htmlspecialchars($variavel, ENT_QUOTES, 'UTF-8', true)`.
+
+```blade
+<!-- Exemplo de Entrada Maliciosa digitada por um usuário em um formulário: -->
+@php
+    $descricaoSensor = "<script>alert('Vulnerabilidade XSS!');</script>";
+@endphp
+
+<!-- Como você escreve no Blade: -->
+<p>{{ $descricaoSensor }}</p>
+
+<!-- O que o Blade gera no HTML compilado: -->
+<!-- &lt;script&gt;alert('Vulnerabilidade XSS!');&lt;/script&gt; -->
+```
+*Resultado no navegador:* O texto é impresso como caracteres visíveis normais e o script **nunca é executado**. A aplicação está blindada por padrão!
+
+### 2. Saída Bruta sem Escape (`{!! !!}`):
+Quando você possui conteúdo HTML legítimo gerado pelo próprio sistema (como ícones SVG seguros ou texto formatado por um editor confiável com purificação prévia), utiliza-se `{!! $htmlSeguro !!}`.
+
+> [!CAUTION]
+> **Regra de Segurança Inegociável (OWASP Top 10 / AppSec):**  
+> **Nunca** utilize `{!! !!}` para renderizar dados enviados pelo usuário via formulários, parâmetros de URL ou bancos de dados não sanitizados. Se fizer isso, sua aplicação estará diretamente vulnerável a **Stored XSS**!
+
+---
+
+## 4. DIRETIVAS DE FLUXO, CONDIÇÕES E LAÇOS OTIMIZADOS
+
+O Blade substitui a sintaxe verbosa do PHP tradicional (`<?php if(...): ?>`) por diretivas elegantes iniciadas por `@`.
+
+### 1. Condicionais: `@if`, `@unless`, `@isset`, `@empty` e `@switch`
+```blade
+{{-- 1. Condicional clássica --}}
+@if($ordem->status === 'CRITICA')
+    <span class="alerta-vermelho">Risco de Parada de Linha!</span>
+@elseif($ordem->status === 'ALERTA')
+    <span class="alerta-amarelo">Atenção Técnica</span>
+@else
+    <span class="alerta-verde">Operação Estável</span>
+@endif
+
+{{-- 2. @unless: Executa somente se a condição for FALSA (o inverso do if) --}}
+@unless($ordem->isConcluida())
+    <button>Finalizar Ordem de Serviço</button>
+@endunless
+
+{{-- 3. @isset e @empty --}}
+@isset($ordem->tecnico_responsavel)
+    <p>Responsável Técnico: {{ $ordem->tecnico_responsavel }}</p>
+@endisset
+```
+
+### 2. O Laço Supremo: `@forelse ... @empty ... @endforelse`
+Em aplicações profissionais, é um erro exibir uma tabela vazia sem aviso ao usuário. Em vez de escrever um `@if(count($lista) > 0)` seguido de `@foreach`, o Blade entrega o `@forelse`:
+
+```blade
+@forelse($ordens as $ordem)
+    <div class="linha-ordem">
+        <strong>#{{ $loop->iteration }}</strong> - {{ $ordem->titulo }}
+    </div>
+@empty
+    <div class="alerta-vazio">
+        Nenhuma ordem de serviço pendente para esta máquina.
+    </div>
+@endforelse
+```
+
+### 3. A Variável Mágica de Iteração: `$loop`
+Dentro de qualquer laço `@foreach` ou `@forelse`, o Blade disponibiliza automaticamente o objeto `$loop`, repleto de propriedades úteis:
+
+| Propriedade de `$loop` | Tipo de Retorno | Finalidade Prática no Back-End |
+| :--- | :---: | :--- |
+| `$loop->index` | `int` | Índice numérico baseado em 0 (0, 1, 2...). |
+| `$loop->iteration` | `int` | Contagem ordinal legível baseada em 1 (1, 2, 3...). |
+| `$loop->first` | `bool` | Retorna `true` se for a primeira iteração do laço. |
+| `$loop->last` | `bool` | Retorna `true` se for a última iteração do laço. |
+| `$loop->even` | `bool` | Retorna `true` em iterações pares (ideal para efeito zebra em tabelas). |
+| `$loop->odd` | `bool` | Retorna `true` em iterações ímpares. |
+| `$loop->count` | `int` | Quantidade total de itens sendo iterados na coleção. |
+
+---
+
+## 5. HERANÇA DE LAYOUTS E COMPONENTES BLADE MODERNOS
+
+```mermaid
+flowchart TD
+    mestre["Layout Mestre: layouts/app.blade.php<br/>• Estrutura HTML5 global<br/>• Barra de navegação e rodapé<br/>• @yield('titulo') e @yield('conteudo')<br/>• @stack('scripts')"]
+
+    v1["View Filha: ordens/index.blade.php<br/>• @extends('layouts.app')<br/>• @section('conteudo')<br/>• Consome <x-card-kpi>"]
+    v2["View Filha: equipamentos/index.blade.php<br/>• @extends('layouts.app')<br/>• @section('conteudo')<br/>• Consome <x-badge-status>"]
+
+    mestre --> v1
+    mestre --> v2
+
+    style mestre fill:#fed7aa,stroke:#ea580c,stroke-width:2px,color:#7c2d12
+    style v1 fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#14532d
+    style v2 fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#1e40af
+```
+
+### 1. Herança Clássica com `@extends`, `@section` e `@yield`:
+- **`@yield('nome_secao')`**: Define um ponto de inserção no layout mestre.
+- **`@extends('layouts.app')`**: Informa que a view filha herda toda a estrutura do layout mestre.
+- **`@section('nome_secao') ... @endsection`**: Injeta o bloco de conteúdo correspondente no `@yield`.
+
+### 2. Componentes Blade Modernos (`<x-...>`):
+Arquiteturas de software modernas priorizam componentes isolados com escopo próprio.  
+Qualquer arquivo criado em `resources/views/components/nome-componente.blade.php` pode ser consumido como uma tag HTML personalizada: `<x-nome-componente />`.
+
+- **Passagem de Propriedades:** `@props(['titulo', 'valor', 'cor' => '#38bdf8'])`.
+- **Slots Padrão:** O corpo interno da tag (`{{ $slot }}`).
+- **Slots Nomeados:** Blocos estruturados com `<x-slot:cabecalho>...</x-slot:cabecalho>`.
+
+---

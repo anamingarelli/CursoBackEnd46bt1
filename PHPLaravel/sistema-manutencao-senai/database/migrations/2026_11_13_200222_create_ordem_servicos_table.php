@@ -13,6 +13,15 @@ return new class extends Migration
     {
         Schema::create('ordem_servicos', function (Blueprint $table) {
             $table->id();
+            $table->string('codigo')->unique();
+            $table->string('titulo');
+            $table->foreignId('equipamento_id')->constrained('equipamentos')->restrictOnDelete();
+            $table->string('tipo');
+            $table->string('prioridade');
+            $table->string('status');
+            $table->string('tecnico')->nullable();
+            $table->dateTime('data_abertura');
+            $table->dateTime('prazo_limite')->nullable();
             $table->timestamps();
         });
     }

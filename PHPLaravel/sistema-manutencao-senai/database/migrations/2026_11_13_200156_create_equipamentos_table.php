@@ -13,7 +13,14 @@ return new class extends Migration
     {
         Schema::create('equipamentos', function (Blueprint $table) {
             $table->id();
-            $table->timestamps();
+            $table->string("tag")->unique();
+            $table->string('nome');
+            $table->string('setor');
+            $table->string('criticidade');
+            $table->string('status');
+            $table->timestamps(); //create_at
+            //quando atualizar uma informação
+            //update_at
         });
     }
 
