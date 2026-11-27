@@ -1,100 +1,99 @@
 <?php
-
 declare(strict_types=1);
 
-namespace Exercicios;
+require_once __DIR__ . '/carregar.php';
 
-use DomainException;
-
-// Exceções de domínio para controle de erros operacionais e de regras de negócio
-class SaldoInsuficienteException extends DomainException {}
-class ValorInvalidoException extends DomainException {}
-class OperacaoNaoPermitidaException extends DomainException {}
-
-// Objeto de Valor (Value Object) que representa a entidade Titular
-class Titular
-{
-    public function __construct(
-        public readonly string $nome,
-        public readonly string $cpf
-    ) {}
-}
-
-// Classe base abstrata responsável por centralizar o estado e métodos comuns
-abstract class ContaBancaria
-{
-    protected float $saldo = 0.0;
-
-    public function __construct(
-        protected Titular $titular
-    ) {}
-
-    public function getSaldo(): float
-    {
-        return $this->saldo;
-    }
-
-    public function getTitular(): Titular
-    {
-        return $this->titular;
-    }
-
-    abstract public function sacar(float $valor): void;
-}
-
-// Subclasse concreta que implementa as regras específicas da Conta Salário
 class ContaSalario extends ContaBancaria
 {
     private int $saquesNoMes = 0;
-    private const TAXA_SAQUE_EXCEDENTE = 4.00;
+    private string $mesReferencia = "";
 
     public function __construct(
+        string $agencia,
+        string $numeroConta,
         Titular $titular,
         public readonly string $cnpjEmpregador
     ) {
-        parent::__construct($titular);
+        parent::__construct(
+            $agencia,
+            $numeroConta,
+            $titular,
+            0.0
+        );
     }
 
-    // Depósito restrito ao CNPJ do empregador previamente cadastrado
-    public function depositar(float $valor, string $cnpjOrigem): void
-    {
+    public function depositar(
+        float $valor,
+        ?string $cnpjOrigem = null
+    ): void {
         if ($cnpjOrigem !== $this->cnpjEmpregador) {
-            throw new OperacaoNaoPermitidaException("Depósito recusado: CNPJ do pagador diverge do cadastrado.");
+            throw new ContaException("Empregador não autorizado.");
         }
-        if ($valor <= 0) {
-            throw new ValorInvalidoException("O valor do depósito deve ser maior que zero.");
-        }
-        $this->saldo += $valor;
+
+        parent::depositar($valor);
     }
 
-    // Aplicação da regra de isenção até o 2º saque e cobrança de taxa a partir do 3º
     public function sacar(float $valor): void
     {
-        if ($valor <= 0) {
-            throw new ValorInvalidoException("O valor do saque deve ser maior que zero.");
+        $this->validarValor($valor);
+        $mes = date("Y-m");
+
+        if ($mes !== $this->mesReferencia) {
+            $this->saquesNoMes = 0;
+            $this->mesReferencia = $mes;
         }
 
-        $taxa = ($this->saquesNoMes >= 2) ? self::TAXA_SAQUE_EXCEDENTE : 0.0;
-        $valorTotal = $valor + $taxa;
+        $taxa = $this->saquesNoMes >= 2 ? 4.00 : 0.00;
+        $total = $valor + $taxa;
 
-        if ($valorTotal > $this->saldo) {
-            throw new SaldoInsuficienteException("Saldo insuficiente incluindo tarifas de saque.");
-        }
-
-        $this->saldo -= $valorTotal;
+        $this->debitar($total);
         $this->saquesNoMes++;
+        $this->registrar("Saque", $total);
+        $this->notificar("Saque realizado: R$ " . $total);
     }
 
-    // Restrição de transferência exclusiva para contas sob o mesmo CPF
-    public function transferir(float $valor, ContaBancaria $destino): void
-    {
-        if ($destino->getTitular()->cpf !== $this->titular->cpf) {
-            throw new OperacaoNaoPermitidaException("Transferência permitida apenas para o mesmo titular.");
+    public function transferir(
+        float $valor,
+        ContaBancaria $contaDestino
+    ): void {
+        if ($this->titular->cpf !== $contaDestino->titular->cpf) {
+            throw new ContaException("Transferência não permitida.");
         }
-        $this->sacar($valor);
-        
-        if (method_exists($destino, 'creditar')) {
-            $destino->creditar($valor);
-        }
+
+        parent::transferir($valor, $contaDestino);
     }
+
+    protected function debitar(float $valor): void
+    {
+        $this->validarValor($valor);
+
+        if ($valor > $this->saldo) {
+            throw new SaldoInsuficienteException($this->saldo, $valor);
+        }
+
+        $this->saldo -= $valor;
+    }
+}
+
+// Teste do exercício.
+$titular = new Titular("Ana Clara", "123.456.789-01");
+
+$conta = new ContaSalario(
+    "0001",
+    "3030-1",
+    $titular,
+    "12345678000199"
+);
+
+try {
+    $conta->depositar(1500.00, "12345678000199");
+
+    $conta->sacar(100.00);
+    $conta->sacar(100.00);
+    $conta->sacar(100.00);
+
+    echo "Saldo final: R$ ";
+    echo number_format($conta->getSaldo(), 2, ",", ".");
+} catch (Throwable $erro) {
+    echo "Erro: " . $erro->getMessage();
 }

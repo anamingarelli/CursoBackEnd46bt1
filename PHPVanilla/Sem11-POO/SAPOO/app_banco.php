@@ -9,6 +9,7 @@ require_once __DIR__ . '/Dominio/Titular.php';
 require_once __DIR__ . '/Dominio/ContaBancaria.php';
 require_once __DIR__ . '/Dominio/ContaCorrente.php';
 require_once __DIR__ . '/Dominio/ContaPoupanca.php';
+require_once __DIR__ . '/Dominio/Transacao.php';
 
 
 $logsOperacionais = [];
